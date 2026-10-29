@@ -81,7 +81,7 @@ final class UdpRelay {
             switch b[3] {
             case 1:
                 guard b.count >= i + 6 else { return }
-                host = .ipv4(IPv4Address(Data(b[i..<i + 4]))!); i += 4
+                host = Nat64.host(b[i..<i + 4].map(String.init).joined(separator: ".")); i += 4
             case 4:
                 guard b.count >= i + 18 else { return }
                 host = .ipv6(IPv6Address(Data(b[i..<i + 16]))!); i += 16
