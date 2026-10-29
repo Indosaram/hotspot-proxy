@@ -103,6 +103,30 @@ enum Tcp {
     static let chunk = 128 * 1024
 }
 
+/// On IPv6-only cellular (NAT64/DNS64), Network.framework cannot reach IPv4 literals directly.
+/// getaddrinfo synthesizes the NAT64 IPv6 address for an IPv4 literal; elsewhere it returns IPv4 and we keep the host as-is.
+enum Nat64 {
+    static func host(_ s: String) -> NWEndpoint.Host {
+        guard IPv4Address(s) != nil else { return NWEndpoint.Host(s) }
+        var hints = addrinfo()
+        hints.ai_flags = AI_DEFAULT
+        hints.ai_family = AF_UNSPEC
+        hints.ai_socktype = SOCK_STREAM
+        var res: UnsafeMutablePointer<addrinfo>?
+        guard getaddrinfo(s, nil, &hints, &res) == 0 else { return NWEndpoint.Host(s) }
+        defer { freeaddrinfo(res) }
+        var p = res
+        while let ai = p {
+            if ai.pointee.ai_family == AF_INET6, let sa = ai.pointee.ai_addr {
+                let a6 = sa.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee.sin6_addr }
+                if let v6 = IPv6Address(withUnsafeBytes(of: a6) { Data($0) }) { return .ipv6(v6) }
+            }
+            p = ai.pointee.ai_next
+        }
+        return NWEndpoint.Host(s)
+    }
+}
+
 final class Session {
     let client: NWConnection
     private var upstream: NWConnection?
@@ -280,7 +304,7 @@ final class Session {
 
     private func connect(host: String, port: UInt16, _ done: @escaping (Bool) -> Void) {
         guard port > 0, let p = NWEndpoint.Port(rawValue: port) else { done(false); return }
-        let up = NWConnection(host: NWEndpoint.Host(host), port: p, using: Tcp.params())
+        let up = NWConnection(host: Nat64.host(host), port: p, using: Tcp.params())
         upstream = up
         var callback: ((Bool) -> Void)? = done
         up.stateUpdateHandler = { [weak self] state in
