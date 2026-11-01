@@ -6,7 +6,7 @@
 
 <p align="center">
   An iOS app that lets devices on your iPhone's Personal Hotspot use <b>the iPhone's own cellular connection as a proxy</b>.<br>
-  HTTP, HTTPS (CONNECT), and SOCKS5 (TCP + UDP ASSOCIATE) on a single port.
+  HTTP, HTTPS (CONNECT), and SOCKS5 share a TCP port; SOCKS5 UDP uses a negotiated relay port.
 </p>
 
 <p align="center">
@@ -46,9 +46,9 @@ Some carriers and plans classify tethered hotspot traffic separately and throttl
 - **Status hero.** A "signal ring" shows the current state: green while running, amber when the hotspot is off, grey when stopped, and red on error.
 - **One-tap start and stop**, with haptic feedback.
 - **Copy the address.** One tap copies `172.20.10.1:8080` to enter on other devices.
-- **Live stats** for active connections, data transferred, and uptime. Stats update only while the screen is visible.
+- **Live stats** for active connections, data transferred, and uptime. UI stats refresh while visible, with a slower background heartbeat for shared state.
 - **Connection guides** for iPhone/iPad, macOS, Android, and Windows.
-- **Mac auto-TUN guide.** The `mac/` scripts route all system traffic through the proxy automatically.
+- **Mac auto-TUN guide.** The `mac/` scripts optionally route traffic through a TUN, with explicit bypasses and DNS recovery.
 - **Welcome flow** that covers turning on the hotspot, local network permission, and how background keep-alive works.
 - **Accessibility:** Dark Mode, Dynamic Type (including accessibility sizes), VoiceOver labels, and Reduce Motion.
 
@@ -56,23 +56,19 @@ Some carriers and plans classify tethered hotspot traffic separately and throttl
 
 1. On the iPhone, turn on **Settings › Personal Hotspot › Allow Others to Join**.
 2. Open the app and tap **Start Proxy**. By default it starts automatically on launch.
-3. Join the hotspot from another device and set its proxy manually:
-   - Server: `172.20.10.1` (shown in the app)
-   - Port: `8080`
-   - HTTP, HTTPS, and SOCKS5 all use the same port.
+3. Join the hotspot from another device and use the **current server IP and port shown in the app** (defaults: `172.20.10.1`, `8080`).
+4. Configure HTTP/HTTPS or an application's SOCKS5 proxy as described in the platform guide. No proxy authentication is supported.
 
-### Mac: system-wide automatic proxy (optional)
+### Platform setup guides · 한국어
 
-The `mac/` directory has a launchd setup built on [sing-box](https://sing-box.sagernet.org) TUN. It sends all traffic through the iPhone proxy, but **only while the Mac is on the hotspot**.
+- **[macOS: manual HTTP/HTTPS, SOCKS5, optional TUN, and DNS recovery](docs/macos.md)**
+- **[Windows 11 / 10: manual proxy, application limitations, and restoration](docs/windows.md)**
 
-```bash
-brew install sing-box
-sudo bash mac/install.sh             # install (auto on/off on network changes)
-sudo bash mac/uninstall.sh           # remove
-sudo bash mac/install-tailscale.sh   # (optional) run Tailscale as a CLI daemon
-```
+Both guides include iPhone prerequisites, connection checks, disabling/restoring settings, and troubleshooting. OS proxy settings apply to applications that honor them; they do not force all traffic or UDP through the proxy. SOCKS5 UDP requires a compatible client using the negotiated UDP port while keeping its TCP control connection open.
 
-`hotspot-tun.sh` runs on every network change and every 30 seconds. When the Mac is on the iPhone hotspot (`172.20.10.x`) and `172.20.10.1:8080` responds, it turns the TUN and DNS on. Otherwise it restores the normal setup.
+### Mac TUN automation (optional)
+
+Read the [Mac guide](docs/macos.md) before installing. The scripts require the default `172.20.10.1:8080` endpoint and a Mac interface on `172.20.10.x`; they do not discover a changed app port. The watcher checks network configuration changes and every 30 seconds, applies DNS only after TUN health checks, and saves the previous DNS for restoration. Private routes and configured exclusions bypass the proxy; this is not a guarantee that all system traffic is proxied. There is no Windows TUN installer in this repository.
 
 ## Background behavior and battery
 
@@ -88,7 +84,7 @@ xcodegen generate
 open HotspotProxy.xcodeproj
 ```
 
-- The project has two targets: `HotspotProxy` (the app) and `HotspotProxyWidget` (the WidgetKit extension).
+- The project has three targets: `HotspotProxy` (app), `HotspotProxyWidget` (WidgetKit extension), and `HotspotProxyTests` (hosted iOS tests).
 - The targets share state through the App Group `group.com.indoyoon.hotspotproxy`. To build under your own team, change `DEVELOPMENT_TEAM`, the bundle IDs, and the App Group in `project.yml`.
 - Icon sources are in `design/icon/*.svg`. The design system is in [`DESIGN.md`](DESIGN.md).
 
@@ -160,7 +156,7 @@ python3 -m unittest discover -s Tests/mac -v     # mocked OS commands; no sudo/n
 On macOS, `swift test` also compiles the production Network.framework proxy and
 runs loopback integration tests for negotiation, malformed HTTP, deadlines,
 IPv6 UDP replies and TCP/UDP association cleanup. The GitHub workflow additionally
-builds the app and widget for the iOS simulator. The tests do not install launchd
+builds the app and widget and runs hosted tests in the iOS simulator. The tests do not install launchd
 jobs or change host DNS. Simulator builds do not verify Personal Hotspot routing,
 background audio, physical-device permission prompts, or live Mac TUN transitions;
 those need a device and a macOS smoke test before release.
