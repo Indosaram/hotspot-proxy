@@ -12,7 +12,7 @@ struct MainView: View {
                 VStack(spacing: Space.l) {
                     StatusHero(status: m.status, endpoint: m.endpoint, errorMessage: m.error,
                                onCopy: { m.copyEndpoint() }, onRetry: { m.start() })
-                    PowerButton(running: m.running) { m.toggle() }
+                    PowerButton(running: m.requested || m.running) { m.toggle() }
                     stats
                     guideLink
                 }

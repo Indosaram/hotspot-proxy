@@ -30,6 +30,8 @@ struct StatusWidgetView: View {
 extension ProxySnapshot {
     var guidance: String {
         switch status {
+        case .starting: "Starting proxy…"
+        case .stale: "Open app to check status"
         case .running: endpoint ?? "No address"
         case .noHotspot: "Turn on Personal Hotspot"
         case .stopped: "Tap to open"

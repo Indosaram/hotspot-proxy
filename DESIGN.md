@@ -106,7 +106,7 @@ Each component lives in `Sources/Design/Components.swift`.
 
 - Haptics use `.sensoryFeedback`: `.success` on start, `.impact(weight: .light)` on stop and copy, `.error` on failure.
 - `@Environment(\.accessibilityReduceMotion)` disables the ring pulse.
-- When the app is hidden, timers stop. The UI polls stats only while visible, which saves battery.
+- When the app is hidden, fast UI polling stops. A slower heartbeat renews the widget observation and checks the hotspot address.
 
 ## 7. Depth & Surface
 
@@ -130,4 +130,4 @@ Accepted debt:
 | Item | Location | Why accepted | Exit |
 |---|---|---|---|
 | English-only UI strings | all views | The UI ships in English only (user requirement). Strings are inline literals, so a String Catalog can be extracted later. | Add `Localizable.xcstrings` if another locale is needed |
-| Widget refresh relies on app pushing reloads | Widget | iOS limits background refresh, and the app is the source of truth | — |
+| Widget refresh timing is controlled by iOS | Widget | Heartbeats renew observations; a scheduled expiry shows Unverified after two minutes | Verify timing on device |

@@ -4,6 +4,8 @@ import Foundation
 /// The app save()s and reloads WidgetCenter on change; the widget only load()s.
 struct ProxySnapshot: Codable, Equatable {
     enum Status: String, Codable {
+        case starting
+        case stale        // last running observation has expired; not a live health assertion
         case running      // listener ready, hotspot on
         case noHotspot    // proxy on but no hotspot (bridge) interface
         case stopped      // stopped by the user
@@ -19,10 +21,24 @@ struct ProxySnapshot: Codable, Equatable {
     var updatedAt: Date
 
     /// "IP:port" to enter on other devices; nil without a hotspot.
-    var endpoint: String? { hotspotIP.map { "\($0):\(port)" } }
+    var endpoint: String? { hotspotIP.map { "\($0.contains(":") ? "[\($0)]" : $0):\(port)" } }
 
-    static let placeholder = ProxySnapshot(status: .running, hotspotIP: "172.20.10.1", port: 8080,
-                                           connections: 3, bytes: 48_300_000, errorMessage: nil, updatedAt: .now)
+    static let freshness: TimeInterval = 120
+    var expiresAt: Date { updatedAt.addingTimeInterval(Self.freshness) }
+    func fresh(at now: Date) -> ProxySnapshot {
+        guard [.running, .starting, .noHotspot].contains(status), now >= expiresAt else { return self }
+        var copy = self
+        copy.status = .stale
+        copy.connections = 0
+        return copy
+    }
+
+    // Gallery previews may share a long-lived extension process. Never reuse its launch timestamp.
+    static var placeholder: ProxySnapshot { preview(at: .now) }
+    static func preview(at now: Date) -> ProxySnapshot {
+        ProxySnapshot(status: .running, hotspotIP: "172.20.10.1", port: 8080,
+                      connections: 3, bytes: 48_300_000, errorMessage: nil, updatedAt: now)
+    }
     static let empty = ProxySnapshot(status: .stopped, hotspotIP: nil, port: 8080,
                                      connections: 0, bytes: 0, errorMessage: nil, updatedAt: .distantPast)
 }

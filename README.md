@@ -39,7 +39,7 @@ Some carriers and plans classify tethered hotspot traffic separately and throttl
   - Rectangular shows the status, `IP:port`, connections, and data transferred.
   - Inline shows a one-line status.
 - **Home Screen** has a small widget with a status chip, the proxy address, stats, and when it last updated.
-- Tapping a widget opens the app. The app reloads widgets only when the state changes, so they cost almost no battery.
+- Tapping a widget opens the app. The app reloads widgets on state changes and with a bounded heartbeat; stale observations become Unverified.
 
 ## Features
 
@@ -76,7 +76,7 @@ sudo bash mac/install-tailscale.sh   # (optional) run Tailscale as a CLI daemon
 
 ## Background behavior and battery
 
-iOS doesn't keep a background app's sockets alive for long. To stay running, the app loops **silent audio** (8 kHz, in 30-second segments). The audio mixes with other apps (`mixWithOthers`) at zero volume. UI timers run only while the screen is visible, and idle UDP flows are cleaned up after 60 seconds.
+iOS doesn't keep a background app's sockets alive for long. To stay running, the app loops **silent audio** (8 kHz, in 30-second segments). The audio mixes with other apps (`mixWithOthers`) at zero volume. UI polling runs only while the screen is visible, with a slower background heartbeat for network state and widgets, and idle UDP destinations are cleaned up after 60 seconds.
 
 > The silent-audio background mode may not pass App Store review. This app is intended for personal sideloading or developer-signed builds.
 
@@ -117,3 +117,50 @@ mac/                     macOS sing-box TUN automation scripts
 | `hotspotproxy://copy` | Copy the proxy address |
 
 Use the "Open URLs" action in Shortcuts to automate them.
+
+## Safety and lifecycle
+
+The app listens only on the active Personal Hotspot bridge address. It does not
+open a proxy on ordinary Wi-Fi interfaces. Without a hotspot it waits for one;
+if iOS has suspended the waiting app, open it after enabling Personal Hotspot.
+Clients on the hotspot are trusted (there is no password authentication).
+HTTP URLs retain their original escaped paths and invalid ports are rejected.
+
+TCP sessions are limited to 128, with a 15-second initial handshake deadline.
+SOCKS5 only accepts clients that offer the no-auth method. UDP ASSOCIATE creates
+a dedicated ephemeral UDP port on the same local address, returns an IPv4 or
+IPv6 reply as appropriate, and closes that port with its TCP control connection.
+Clients must use the returned port. The relay accepts only the TCP peer's IP and
+requested UDP source port (or pins the first port when zero was requested).
+Each association is limited to 64 destination sockets; individual destinations
+expire after 60 seconds without traffic, even when other destinations are busy.
+
+Widgets show a recent observation, not an independent health check. The app
+publishes a heartbeat while running; after two minutes without a fresh observation,
+a scheduled timeline entry changes to **Unverified**. iOS controls widget update
+timing and may show Unverified while a healthy app is awaiting its next refresh.
+
+Mac automation discovers the network service attached to the hotspot interface
+(including USB or renamed services). It changes DNS only after the sing-box process,
+TUN interface and a DNS query through the TUN are healthy. It saves and restores the
+original DNS list, preserves a user's newer changes, and retains recovery state if
+restoration fails. The watcher uses macOS system Perl for an OS advisory lock, which releases automatically on process exit or crash. Retry uninstall if it reports a restore or watcher-lock failure.
+If an older installation already left `172.19.0.2` configured without a DNS backup,
+restore the intended DNS manually first; the original setting cannot be inferred.
+The default Mac configuration still uses `172.20.10.1:8080`; changing the app port
+requires updating both the Mac configuration and watcher probe.
+
+## Tests
+
+```bash
+swift test                                      # portable parser/state tests
+python3 -m unittest discover -s Tests/mac -v     # mocked OS commands; no sudo/network changes
+```
+
+On macOS, `swift test` also compiles the production Network.framework proxy and
+runs loopback integration tests for negotiation, malformed HTTP, deadlines,
+IPv6 UDP replies and TCP/UDP association cleanup. The GitHub workflow additionally
+builds the app and widget for the iOS simulator. The tests do not install launchd
+jobs or change host DNS. Simulator builds do not verify Personal Hotspot routing,
+background audio, physical-device permission prompts, or live Mac TUN transitions;
+those need a device and a macOS smoke test before release.

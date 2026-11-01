@@ -30,12 +30,12 @@ struct SettingsView: View {
                             .onSubmit(commitPort)
                             .accessibilityLabel("Port number")
                     }
-                    .disabled(m.running)
+                    .disabled(m.requested || m.running)
                     Toggle("Start on Launch", isOn: $m.autoStart)
                 } header: {
                     Text("Proxy")
                 } footer: {
-                    if m.running {
+                    if m.requested || m.running {
                         Text("Stop the proxy to change the port.")
                     } else if !portValid && !portText.isEmpty {
                         Text("Enter a number between 1024 and 65535.").foregroundStyle(.red)
@@ -48,7 +48,7 @@ struct SettingsView: View {
                     if m.addresses.isEmpty {
                         Text("No active network interfaces").foregroundStyle(.secondary)
                     }
-                    ForEach(m.addresses, id: \.0) { a in
+                    ForEach(Array(m.addresses.enumerated()), id: \.offset) { _, a in
                         CopyableRow(title: a.0.hasPrefix("bridge") ? "\(a.0) · Hotspot" : a.0, value: a.1)
                     }
                 } header: {

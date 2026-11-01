@@ -6,3 +6,9 @@ xcuserdata/
 .omo/
 *.ipa
 *.dSYM.zip
+
+.build/
+.swiftpm/
+__pycache__/
+
+*.xcresult/

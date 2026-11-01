@@ -56,7 +56,7 @@ struct MacSetupView: View {
                 VStack(alignment: .leading, spacing: Space.s) {
                     Label("How It Works", systemImage: "bolt.horizontal.circle")
                         .font(.headline)
-                    Text("When your Mac joins the iPhone hotspot (172.20.10.x) and this app’s proxy (172.20.10.1:8080) responds, a sing-box TUN turns on and sends all traffic through the proxy. Leave the hotspot and it turns off and restores DNS.")
+                    Text("When your Mac joins the iPhone hotspot (172.20.10.x) and this app’s proxy (172.20.10.1:8080) responds, a sing-box TUN turns on and sends all traffic through the proxy. Leave the hotspot and it turns off and restores your previous DNS settings.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -70,7 +70,7 @@ struct MacSetupView: View {
             } header: {
                 Text("Terminal Commands")
             } footer: {
-                Text("Run from the repo’s mac/ directory. It re-checks on every network change and every 30 seconds.")
+                Text("Run from the repository root. It re-checks on every network change and every 30 seconds.")
             }
         }
         .navigationTitle("Mac Auto-Connect")

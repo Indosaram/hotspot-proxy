@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+        A123456789ABCDEF00000001 /* ProxyProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A123456789ABCDEF00000002 /* ProxyProtocol.swift */; };
 		04132E1E3C6DFAEC654E76C7 /* HotspotProxyWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41E29580C30F8C16E47CEC22 /* HotspotProxyWidget.swift */; };
 		08C572E631BBF63AF8F91023 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5FDCD660594639D3D9F882EA /* Colors.xcassets */; };
 		0E7A9B5A633684B3F440ADE5 /* ProxySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 685249830A47FFC8CF96F391 /* ProxySnapshot.swift */; };
@@ -28,6 +29,7 @@
 		EA1BFCFD08B7579BAE4F121E /* ProxySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 685249830A47FFC8CF96F391 /* ProxySnapshot.swift */; };
 		ED7AE74822802B0C625D0E1B /* StatusStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FB4878093BCC8426A1703FA /* StatusStyle.swift */; };
 		F3E1039C005985388D64C3C2 /* StatusStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FB4878093BCC8426A1703FA /* StatusStyle.swift */; };
+B00000000000000000000001 /* ProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000002; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,6 +40,7 @@
 			remoteGlobalIDString = 46170FD03D9E833E5A3AD3C0;
 			remoteInfo = HotspotProxyWidget;
 		};
+B00000000000000000000004 = {isa = PBXContainerItemProxy; containerPortal = 7277FB64594B8E30D20977FC; proxyType = 1; remoteGlobalIDString = B286AFD794504CA2BB22659A; remoteInfo = HotspotProxy; };
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -55,6 +58,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+        A123456789ABCDEF00000002 /* ProxyProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyProtocol.swift; sourceTree = "<group>"; };
 		15E672D68B40DFAA7219AA39 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		174E27382801AFBCE50C0184 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		1C0C0B6F894A8C834C9AC00E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -76,6 +80,8 @@
 		D422803A94436C3FB9843B3C /* ProxyServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyServer.swift; sourceTree = "<group>"; };
 		D4AEFEE192E4A48C068D10C3 /* KeepAlive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeepAlive.swift; sourceTree = "<group>"; };
 		F25F709F72F48297DD484188 /* WidgetViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetViews.swift; sourceTree = "<group>"; };
+B00000000000000000000002 /* ProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/ProxyCoreTests/ProtocolTests.swift; sourceTree = SOURCE_ROOT; };
+B00000000000000000000003 /* HotspotProxyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = HotspotProxyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -95,6 +101,7 @@
 				34F095032473ED9BA3CBF4CE /* Sources */,
 				BB1C278062E3BBE7DA95DF60 /* Widget */,
 				A7CE8AE44C422F751D0A2961 /* Products */,
+                B00000000000000000000002 /* ProtocolTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -127,6 +134,7 @@
 			children = (
 				5FDCD660594639D3D9F882EA /* Colors.xcassets */,
 				685249830A47FFC8CF96F391 /* ProxySnapshot.swift */,
+                A123456789ABCDEF00000002 /* ProxyProtocol.swift */,
 				2FB4878093BCC8426A1703FA /* StatusStyle.swift */,
 			);
 			path = Shared;
@@ -145,6 +153,7 @@
 			children = (
 				348F0D871998B1CDD69F7AEA /* HotspotProxy.app */,
 				4FFB0C064BC5DC0E82C76A0F /* HotspotProxyWidget.appex */,
+                B00000000000000000000003 /* HotspotProxyTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -211,6 +220,7 @@
 			productReference = 348F0D871998B1CDD69F7AEA /* HotspotProxy.app */;
 			productType = "com.apple.product-type.application";
 		};
+B00000000000000000000007 /* HotspotProxyTests */ = {isa = PBXNativeTarget; buildConfigurationList = B00000000000000000000008; buildPhases = (B00000000000000000000006,); buildRules = (); dependencies = (B00000000000000000000005,); name = HotspotProxyTests; productName = HotspotProxyTests; productReference = B00000000000000000000003; productType = "com.apple.product-type.bundle.unit-test"; };
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -244,6 +254,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+                B00000000000000000000007 /* HotspotProxyTests */,
 				B286AFD794504CA2BB22659A /* HotspotProxy */,
 				46170FD03D9E833E5A3AD3C0 /* HotspotProxyWidget */,
 			);
@@ -295,6 +306,7 @@
 				10523A8352AF485D84968D3F /* ProxyModel.swift in Sources */,
 				9C2C609F228C1C3E34D4E926 /* ProxyServer.swift in Sources */,
 				EA1BFCFD08B7579BAE4F121E /* ProxySnapshot.swift in Sources */,
+                A123456789ABCDEF00000001 /* ProxyProtocol.swift in Sources */,
 				A1A9BEBCD00F2B361C8A17B1 /* SettingsView.swift in Sources */,
 				F3E1039C005985388D64C3C2 /* StatusStyle.swift in Sources */,
 				318004E1BE5E500A4D636D4C /* Tokens.swift in Sources */,
@@ -302,6 +314,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+B00000000000000000000006 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B00000000000000000000001,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -310,6 +323,7 @@
 			target = 46170FD03D9E833E5A3AD3C0 /* HotspotProxyWidget */;
 			targetProxy = BE6D7E9E3A8F410D5853B3A0 /* PBXContainerItemProxy */;
 		};
+B00000000000000000000005 = {isa = PBXTargetDependency; target = B286AFD794504CA2BB22659A; targetProxy = B00000000000000000000004; };
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -520,6 +534,8 @@
 			};
 			name = Release;
 		};
+B00000000000000000000009 = {isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HotspotProxy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HotspotProxy"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.indoyoon.hotspotproxy.tests; SDKROOT = iphoneos; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+B0000000000000000000000A = {isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HotspotProxy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HotspotProxy"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.indoyoon.hotspotproxy.tests; SDKROOT = iphoneos; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -550,6 +566,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+B00000000000000000000008 = {isa = XCConfigurationList; buildConfigurations = (B00000000000000000000009,B0000000000000000000000A,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
 /* End XCConfigurationList section */
 	};
 	rootObject = 7277FB64594B8E30D20977FC /* Project object */;

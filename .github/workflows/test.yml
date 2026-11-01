@@ -1,0 +1,39 @@
+name: Tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  apple:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: macOS protocol and loopback integration tests
+        run: swift test
+      - name: DNS lifecycle tests with mocked OS commands
+        run: python3 -m unittest discover -s Tests/mac -v
+      - name: Choose available iPhone simulator
+        run: |
+          xcrun simctl list devices available -j > /tmp/devices.json
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          devices=json.load(open('/tmp/devices.json'))['devices']
+          phones=[d for runtime, group in devices.items() if 'iOS' in runtime for d in group if d.get('isAvailable') and d['name'].startswith('iPhone')]
+          if not phones: raise SystemExit('No available iPhone simulator')
+          print('SIMULATOR_ID='+phones[0]['udid'])
+          PY
+      - name: Build app and widget and run iOS simulator tests
+        run: xcodebuild -project HotspotProxy.xcodeproj -scheme HotspotProxy -destination "platform=iOS Simulator,id=$SIMULATOR_ID" -configuration Debug -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apple-test-results
+          path: TestResults.xcresult
+          if-no-files-found: ignore

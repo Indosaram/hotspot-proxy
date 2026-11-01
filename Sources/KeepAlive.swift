@@ -3,25 +3,32 @@ import AVFoundation
 /// Loops silent audio so the app (and the proxy) stays alive in the background.
 final class KeepAlive {
     private var player: AVAudioPlayer?
+    var onFailure: (() -> Void)?
+    private var interruptionObserver: NSObjectProtocol?
+    private enum AudioError: Error { case playbackFailed }
 
     init() {
-        NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] note in
+        interruptionObserver = NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] note in
             guard let self, self.player != nil,
                   let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
                   AVAudioSession.InterruptionType(rawValue: raw) == .ended else { return }
-            try? AVAudioSession.sharedInstance().setActive(true)
-            self.player?.play()
+            do {
+                try AVAudioSession.sharedInstance().setActive(true)
+                guard self.player?.play() == true else { throw AudioError.playbackFailed }
+            } catch { self.onFailure?() }
         }
     }
 
-    func start() {
+    deinit { if let interruptionObserver { NotificationCenter.default.removeObserver(interruptionObserver) } }
+
+    func start() throws {
         let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback, options: [.mixWithOthers])
-        try? session.setActive(true)
-        if player == nil { player = try? AVAudioPlayer(data: Self.silentWav()) }
+        try session.setCategory(.playback, options: [.mixWithOthers])
+        try session.setActive(true)
+        if player == nil { player = try AVAudioPlayer(data: Self.silentWav()) }
         player?.numberOfLoops = -1
         player?.volume = 0
-        player?.play()
+        guard player?.play() == true else { throw AudioError.playbackFailed }
     }
 
     func stop() {
