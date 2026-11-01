@@ -73,3 +73,26 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  HotspotProxyTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/ProxyCoreTests/ProtocolTests.swift
+    dependencies:
+      - target: HotspotProxy
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.indoyoon.hotspotproxy.tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  HotspotProxy:
+    build:
+      targets:
+        HotspotProxy: all
+    test:
+      commandLineArguments:
+        "-autoStart": true
+        "NO": true
+      targets:
+        - HotspotProxyTests

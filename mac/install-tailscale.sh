@@ -9,7 +9,8 @@ pkill -x Tailscale 2>/dev/null || true
 pkill -x tailscaled 2>/dev/null || true
 sleep 2
 install -m 755 tailscaled-wrapper.sh /usr/local/libexec/tailscaled-wrapper.sh
-install -m 755 hotspot-tun.sh /usr/local/libexec/hotspot-tun.sh
+# The watcher and DNS recovery state are owned by install.sh.
+[ -x /usr/local/libexec/hotspot-tun.sh ] || { echo "Run mac/install.sh first" >&2; exit 1; }
 install -m 644 com.indo.tailscaled.plist /Library/LaunchDaemons/
 launchctl bootout system/com.indo.tailscaled 2>/dev/null || true
 launchctl bootstrap system /Library/LaunchDaemons/com.indo.tailscaled.plist

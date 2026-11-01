@@ -82,6 +82,10 @@ struct StatusHero: View {
 
     @ViewBuilder private var content: some View {
         switch status {
+        case .starting:
+            Text("Waiting for the hotspot listener to become ready.").foregroundStyle(.secondary)
+        case .stale:
+            Text("Open the app to check the proxy.").foregroundStyle(.secondary)
         case .running:
             if let endpoint {
                 Text(endpoint)

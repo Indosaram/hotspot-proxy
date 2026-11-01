@@ -13,11 +13,18 @@ struct StatusProvider: TimelineProvider {
 
     func getSnapshot(in context: Context, completion: @escaping (StatusEntry) -> Void) {
         let s = context.isPreview ? ProxySnapshot.placeholder : SharedStore.load()
-        completion(StatusEntry(date: .now, snapshot: s))
+        completion(StatusEntry(date: .now, snapshot: s.fresh(at: .now)))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<StatusEntry>) -> Void) {
-        completion(Timeline(entries: [StatusEntry(date: .now, snapshot: SharedStore.load())], policy: .never))
+        let now = Date()
+        let snapshot = SharedStore.load()
+        var entries = [StatusEntry(date: now, snapshot: snapshot.fresh(at: now))]
+        if [.running, .starting, .noHotspot].contains(snapshot.status), snapshot.expiresAt > now {
+            entries.append(StatusEntry(date: snapshot.expiresAt, snapshot: snapshot.fresh(at: snapshot.expiresAt)))
+        }
+        // The pre-scheduled expiry entry remains useful even if iOS delays the next reload.
+        completion(Timeline(entries: entries, policy: .after(max(now.addingTimeInterval(60), snapshot.expiresAt))))
     }
 }
 
