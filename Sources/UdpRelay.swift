@@ -105,7 +105,7 @@ final class UdpRelay {
         if let existing = outs[key] { connection = existing }
         else {
             guard activity.canInsert, let port = NWEndpoint.Port(rawValue: address.port) else { return }
-            connection = NWConnection(host: NWEndpoint.Host(address.host), port: port, using: .udp)
+            connection = NWConnection(host: Nat64.host(address.host), port: port, using: .udp)
             outs[key] = connection
             connection.stateUpdateHandler = { [weak self, weak connection] state in
                 guard let self, let connection, self.outs[key] === connection else { return }
