@@ -99,6 +99,9 @@ final class ProxyModel: ObservableObject {
         if demo {
             running = true; startedAt = .now
         } else {
+            // Arm the keep-alive before any hotspot exists: the app must survive in the
+            // background to notice the hotspot appearing, and to keep the widget snapshot fresh.
+            if !armKeepAlive() { return }
             refreshNetwork()
             guard requested else { return }
             let t = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
@@ -125,17 +128,30 @@ final class ProxyModel: ObservableObject {
         generation = nil
         boundHosts = []
         server.stop()
-        keepAlive.stop()
+        // The keep-alive deliberately survives losing the hotspot: the app must stay
+        // awake to detect it coming back and to keep publishing widget state.
         running = false; starting = false; startedAt = nil
         guard !hosts.isEmpty else { publishSnapshot(force: true); return }
         guard let port = UInt16(exactly: port), port >= 1024 else { fail("Port must be between 1024 and 65535."); return }
-        do { try keepAlive.start() } catch { fail("Could not start background audio: \(error)"); return }
+        guard armKeepAlive() else { return }
         let id = UUID()
         generation = id
         boundHosts = hosts
         starting = true
         server.start(port: port, hosts: hosts, generation: id)
         publishSnapshot(force: true)
+    }
+
+    /// Keeps the process alive while the proxy is requested. Idempotent; the silent loop
+    /// survives hotspot changes so the heartbeat and widget updates never stop.
+    @discardableResult
+    private func armKeepAlive() -> Bool {
+        guard !demo else { return true }
+        do { try keepAlive.start() } catch {
+            fail("Could not start background audio: \(error)")
+            return false
+        }
+        return true
     }
 
     private func fail(_ message: String) {
