@@ -100,6 +100,15 @@ final class ProtocolTests: XCTestCase {
         XCTAssertEqual(preview.fresh(at: later).status, .running)
         XCTAssertEqual(preview.expiresAt, later.addingTimeInterval(120))
     }
+    func testHotspotInterfaceMatchesIOSAndMacOSPelling() {
+        // iOS names the Personal Hotspot interface ap0/ap1; macOS bridges it as bridge100.
+        for name in ["ap0", "ap1", "bridge0", "bridge100"] {
+            XCTAssertTrue(ProxySnapshot.isHotspotInterface(name), "\(name) should count as a hotspot")
+        }
+        for name in ["en0", "en8", "pdp_ip0", "utun4", "lo0", "ipsec4", "awdl0"] {
+            XCTAssertFalse(ProxySnapshot.isHotspotInterface(name), "\(name) must not count as a hotspot")
+        }
+    }
     func testIPv6EndpointUsesBrackets() {
         var snapshot = ProxySnapshot.placeholder
         snapshot.hotspotIP = "fe80::1%bridge100"

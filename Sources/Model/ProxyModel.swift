@@ -62,7 +62,7 @@ final class ProxyModel: ObservableObject {
         publishSnapshot()
     }
 
-    private var hotspotHosts: [String] { addresses.filter { $0.0.hasPrefix("bridge") }.map { $0.1 }.sorted() }
+    private var hotspotHosts: [String] { addresses.filter { ProxySnapshot.isHotspotInterface($0.0) }.map { $0.1 }.sorted() }
     var hotspotIP: String? { hotspotHosts.first { !$0.contains(":") } ?? hotspotHosts.first }
     var endpoint: String? { snapshot.endpoint }
 
@@ -218,12 +218,12 @@ final class ProxyModel: ObservableObject {
         for p in sequence(first: first, next: { $0.pointee.ifa_next }) {
             guard let sa = p.pointee.ifa_addr else { continue }
             let name = String(cString: p.pointee.ifa_name)
-            guard sa.pointee.sa_family == UInt8(AF_INET) || (name.hasPrefix("bridge") && sa.pointee.sa_family == UInt8(AF_INET6)) else { continue }
+            guard sa.pointee.sa_family == UInt8(AF_INET) || (ProxySnapshot.isHotspotInterface(name) && sa.pointee.sa_family == UInt8(AF_INET6)) else { continue }
             guard name != "lo0", (p.pointee.ifa_flags & UInt32(IFF_UP)) != 0 else { continue }
             var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
             guard getnameinfo(sa, socklen_t(sa.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 else { continue }
             out.append((name, String(cString: host)))
         }
-        addresses = out.sorted { ($0.0.hasPrefix("bridge") ? 0 : 1) < ($1.0.hasPrefix("bridge") ? 0 : 1) }
+        addresses = out.sorted { (ProxySnapshot.isHotspotInterface($0.0) ? 0 : 1) < (ProxySnapshot.isHotspotInterface($1.0) ? 0 : 1) }
     }
 }

@@ -49,7 +49,7 @@ struct SettingsView: View {
                         Text("No active network interfaces").foregroundStyle(.secondary)
                     }
                     ForEach(Array(m.addresses.enumerated()), id: \.offset) { _, a in
-                        CopyableRow(title: a.0.hasPrefix("bridge") ? "\(a.0) · Hotspot" : a.0, value: a.1)
+                        CopyableRow(title: ProxySnapshot.isHotspotInterface(a.0) ? "\(a.0) · Hotspot" : a.0, value: a.1)
                     }
                 } header: {
                     Text("Network Interfaces")

@@ -24,6 +24,12 @@ struct ProxySnapshot: Codable, Equatable {
     var endpoint: String? { hotspotIP.map { "\($0.contains(":") ? "[\($0)]" : $0):\(port)" } }
 
     static let freshness: TimeInterval = 120
+
+    /// iOS exposes the Personal Hotspot on an `ap*` interface; macOS bridges it as `bridge*`.
+    /// Matching only `bridge` made the iPhone app report "no hotspot" forever while hosting.
+    static func isHotspotInterface(_ name: String) -> Bool {
+        name.hasPrefix("bridge") || name.hasPrefix("ap")
+    }
     var expiresAt: Date { updatedAt.addingTimeInterval(Self.freshness) }
     func fresh(at now: Date) -> ProxySnapshot {
         guard [.running, .starting, .noHotspot].contains(status), now >= expiresAt else { return self }
