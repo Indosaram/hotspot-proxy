@@ -120,4 +120,30 @@ final class ProtocolTests: XCTestCase {
         XCTAssertNil(DeepLink(url: URL(string: "https://start")!))
         XCTAssertNil(DeepLink(url: URL(string: "hotspotproxy://unknown")!))
     }
+
+    /// One address can reach the host list under two spellings. Binding both on the same
+    /// port fails with EADDRINUSE no matter which port is configured, which is why changing
+    /// the port in Settings never cleared "Address already in use".
+    func testCanonicalHostFoldsIPv4MappedSpellings() {
+        XCTAssertEqual(ProxySnapshot.canonicalHost("172.20.10.1"), "172.20.10.1")
+        XCTAssertEqual(ProxySnapshot.canonicalHost("::ffff:172.20.10.1"), "172.20.10.1")
+        XCTAssertEqual(ProxySnapshot.canonicalHost("::FFFF:172.20.10.1"), "172.20.10.1")
+        XCTAssertEqual(ProxySnapshot.canonicalHost("0.0.0.0"), "0.0.0.0")
+    }
+
+    func testCanonicalHostKeepsZoneAndLowercasesIPv6() {
+        XCTAssertEqual(ProxySnapshot.canonicalHost("fe80::1%ap0"), "fe80::1%ap0")
+        XCTAssertEqual(ProxySnapshot.canonicalHost("FE80::1%ap0"), "fe80::1%ap0")
+        XCTAssertEqual(ProxySnapshot.canonicalHost("fe80::C75:5FB4:1637:4C1C"), "fe80::c75:5fb4:1637:4c1c")
+        XCTAssertEqual(ProxySnapshot.canonicalHost("not-an-address"), "not-an-address")
+    }
+
+    func testUniqueHostsCollapsesDuplicateAddressSpellings() {
+        XCTAssertEqual(ProxySnapshot.uniqueHosts(["172.20.10.1", "::ffff:172.20.10.1"]), ["172.20.10.1"])
+        XCTAssertEqual(ProxySnapshot.uniqueHosts(["::ffff:172.20.10.1", "172.20.10.1"]), ["172.20.10.1"])
+        XCTAssertEqual(ProxySnapshot.uniqueHosts(["172.20.10.1", "172.20.10.1"]), ["172.20.10.1"])
+        XCTAssertEqual(ProxySnapshot.uniqueHosts(["fe80::1%ap0", "FE80::1%ap0"]), ["fe80::1%ap0"])
+        XCTAssertEqual(ProxySnapshot.uniqueHosts(["172.20.10.1", "fe80::1%ap0"]), ["172.20.10.1", "fe80::1%ap0"])
+        XCTAssertEqual(ProxySnapshot.uniqueHosts([]), [])
+    }
 }

@@ -13,14 +13,29 @@ final class ProxyServer {
     var onState: ((UUID, String?) -> Void)?
 
     /// Bind only the selected hotspot address, never a wildcard LAN listener.
+    /// Hosts are deduplicated by their canonical form: one address reachable under two
+    /// spellings would otherwise be bound twice and fail with EADDRINUSE on any port.
     func start(port: UInt16, hosts: [String], generation: UUID) {
         queue.async { [weak self] in
             guard let self else { return }
             self.stopOnQueue()
             self.generation = generation
             do {
+                let hosts = ProxySnapshot.uniqueHosts(hosts)
                 guard !hosts.isEmpty, port > 0, let endpointPort = NWEndpoint.Port(rawValue: port) else { throw ProxyError.invalidPort }
-                for host in Set(hosts) {
+                var outcomes: [String: Bool] = [:]
+                // Report running as soon as one listener is up, and only fail when all are
+                // gone: one unusable address must not take the whole proxy down.
+                func settle(_ host: String, ready isReady: Bool) {
+                    outcomes[host] = isReady
+                    guard generation == self.generation else { return }
+                    if outcomes.values.contains(true) {
+                        self.onState?(generation, nil)
+                    } else if outcomes.count == hosts.count {
+                        self.onState?(generation, "No hotspot address could accept connections")
+                    }
+                }
+                for host in hosts {
                     let params = Tcp.params()
                     params.requiredLocalEndpoint = .hostPort(host: NWEndpoint.Host(host), port: endpointPort)
                     let listener = try NWListener(using: params)
@@ -34,10 +49,14 @@ final class ProxyServer {
                         switch state {
                         case .ready:
                             self.readyHosts.insert(host)
-                            if self.readyHosts.count == Set(hosts).count { self.onState?(generation, nil) }
-                        case .failed(let error), .waiting(let error):
-                            self.stopOnQueue()
-                            self.onState?(generation, "Listener error: \(error)")
+                            settle(host, ready: true)
+                        case .failed(let error):
+                            self.retire(listener, host: host, error: error, generation: generation)
+                            settle(host, ready: false)
+                        case .waiting:
+                            // Waiting is transient (interface not yet usable); the listener
+                            // retries on its own. Treating it as fatal killed healthy hosts.
+                            break
                         default: break
                         }
                     }
@@ -47,6 +66,20 @@ final class ProxyServer {
                 self.stopOnQueue()
                 self.onState?(generation, "Failed to start: \(error)")
             }
+        }
+    }
+
+    /// One host failing must not take down the others: only report when every host is gone.
+    private func retire(_ listener: NWListener, host: String, error: Error, generation: UUID) {
+        guard generation == self.generation else { return }
+        listener.stateUpdateHandler = nil
+        listener.newConnectionHandler = nil
+        listener.cancel()
+        listeners.removeAll { $0 === listener }
+        readyHosts.remove(host)
+        if listeners.isEmpty {
+            stopOnQueue()
+            onState?(generation, "Listener error: \(error)")
         }
     }
 

@@ -62,7 +62,9 @@ final class ProxyModel: ObservableObject {
         publishSnapshot()
     }
 
-    private var hotspotHosts: [String] { addresses.filter { ProxySnapshot.isHotspotInterface($0.0) }.map { $0.1 }.sorted() }
+    private var hotspotHosts: [String] {
+        ProxySnapshot.uniqueHosts(addresses.filter { ProxySnapshot.isHotspotInterface($0.0) }.map { $0.1 })
+    }
     var hotspotIP: String? { hotspotHosts.first { !$0.contains(":") } ?? hotspotHosts.first }
     var endpoint: String? { snapshot.endpoint }
 

@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#endif
 
 /// Proxy state shared between app and widget through the App Group.
 /// The app save()s and reloads WidgetCenter on change; the widget only load()s.
@@ -29,6 +32,44 @@ struct ProxySnapshot: Codable, Equatable {
     /// Matching only `bridge` made the iPhone app report "no hotspot" forever while hosting.
     static func isHotspotInterface(_ name: String) -> Bool {
         name.hasPrefix("bridge") || name.hasPrefix("ap")
+    }
+
+    /// Folds the spellings of one address into a single string: `getifaddrs` can report the
+    /// same hotspot address as both `172.20.10.1` and its IPv4-mapped form
+    /// `::ffff:172.20.10.1`. One listener is opened per entry, and binding those two on the
+    /// same port fails with EADDRINUSE on *every* port, so a port change never helps.
+    static func canonicalHost(_ host: String) -> String {
+        var v4 = in_addr()
+        if inet_pton(AF_INET, host, &v4) == 1 {
+            var buf = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+            guard inet_ntop(AF_INET, &v4, &buf, socklen_t(INET_ADDRSTRLEN)) != nil else { return host }
+            return String(cString: buf)
+        }
+        var address = host
+        var zone = ""
+        if let percent = host.firstIndex(of: "%") {
+            address = String(host[host.startIndex..<percent])
+            zone = String(host[percent...])
+        }
+        var v6 = in6_addr()
+        guard inet_pton(AF_INET6, address, &v6) == 1 else { return host.lowercased() }
+        let bytes = withUnsafeBytes(of: v6) { Array($0) }
+        if bytes.count == 16, bytes[0..<10].allSatisfy({ $0 == 0 }), bytes[10] == 0xFF, bytes[11] == 0xFF {
+            return "\(bytes[12]).\(bytes[13]).\(bytes[14]).\(bytes[15])"
+        }
+        var buf = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
+        guard inet_ntop(AF_INET6, &v6, &buf, socklen_t(INET6_ADDRSTRLEN)) != nil else { return address.lowercased() + zone }
+        return String(cString: buf).lowercased() + zone
+    }
+
+    /// Deduplicates address spellings while keeping the first occurrence's order.
+    static func uniqueHosts(_ hosts: [String]) -> [String] {
+        var seen = Set<String>()
+        var out: [String] = []
+        for host in hosts where seen.insert(canonicalHost(host)).inserted {
+            out.append(canonicalHost(host))
+        }
+        return out
     }
     var expiresAt: Date { updatedAt.addingTimeInterval(Self.freshness) }
     func fresh(at now: Date) -> ProxySnapshot {
