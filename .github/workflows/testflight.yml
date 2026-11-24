@@ -1,0 +1,124 @@
+name: TestFlight
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testflight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require signing secrets
+        run: |
+          missing=0
+          for pair in "APPLE_TEAM_ID=$TEAM_ID" "ASC_KEY_ID=$KEY_ID" "ASC_ISSUER_ID=$ISSUER_ID" "ASC_PRIVATE_KEY=$PRIVATE_KEY"; do
+            name="${pair%%=*}"
+            if [ -z "${pair#*=}" ]; then
+              echo "::error::repository secret $name is not set"
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+
+      - name: Install the App Store Connect API key
+        run: |
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_$KEY_ID.p8"
+          printf '%s\n' "$PRIVATE_KEY" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Select Xcode
+        run: |
+          ls /Applications | grep -i '^Xcode'
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Unit tests
+        run: |
+          python3 -m unittest discover -s Tests/mac -v
+          SIMULATOR_ID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          phones = [d for runtime, group in devices.items() if "iOS" in runtime
+                    for d in group if d.get("isAvailable") and d["name"].startswith("iPhone")]
+          if not phones:
+              raise SystemExit("no available iPhone simulator")
+          print(phones[0]["udid"])
+          ')
+          xcodebuild -project HotspotProxy.xcodeproj -scheme HotspotProxy \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -configuration Debug CODE_SIGNING_ALLOWED=NO test
+
+      - name: Archive for distribution
+        run: |
+          xcodebuild -project HotspotProxy.xcodeproj -scheme HotspotProxy \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/HotspotProxy.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            archive
+
+      - name: Export the IPA
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>export</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><true/>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/HotspotProxy.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID"
+
+      - name: Upload to TestFlight
+        run: |
+          IPA=$(find "$RUNNER_TEMP/export" -maxdepth 1 -name '*.ipa' | head -1)
+          [ -n "$IPA" ] || { echo "::error::no IPA was produced"; exit 1; }
+          echo "uploading $IPA"
+          xcrun altool --upload-app --type ios --file "$IPA" \
+            --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
+
+      - name: Keep the IPA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HotspotProxy-ipa
+          path: ${{ runner.temp }}/export/*.ipa
+          if-no-files-found: warn
+          retention-days: 14
