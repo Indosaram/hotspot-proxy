@@ -45,7 +45,7 @@ proxy_up() { /usr/bin/nc -z -G 2 172.20.10.1 8080 >/dev/null 2>&1; }
 tun_ready() {
   /bin/launchctl print "system/$LABEL" 2>/dev/null | grep -q 'state = running' &&
     /sbin/ifconfig "$TUN" >/dev/null 2>&1 &&
-    /usr/bin/dig @"$TUN_DNS" . NS +time=2 +tries=1 2>/dev/null | grep -q 'status: NOERROR'
+    /usr/sbin/netstat -rn -f inet 2>/dev/null | grep -q "$TUN"
 }
 restore_dns() {
   [ -d "$STATE/dns-state" ] || return 0
@@ -68,31 +68,13 @@ restore_dns() {
   rm -rf "$STATE/dns-state"
 }
 activate_dns() {
-  local service="$1" current saved
-  if [ -d "$STATE/dns-state" ]; then
-    saved=$(cat "$STATE/dns-state/service") || return 1
-    [ "$saved" = "$service" ] || restore_dns || return 1
-  fi
+  local service="$1" current
+  restore_dns || return 1
   current=$(/usr/sbin/networksetup -getdnsservers "$service") || return 1
-  if [ -d "$STATE/dns-state" ] && [ "$current" = "$TUN_DNS" ]; then return 0; fi
-  # Refresh the backup if the user changed DNS while active.
-  [ ! -d "$STATE/dns-state" ] || restore_dns || return 1
   if [ "$current" = "$TUN_DNS" ]; then
-    echo "TUN DNS has no saved original configuration; restore DNS manually before enabling" >&2
-    return 1
+    /usr/sbin/networksetup -setdnsservers "$service" Empty || return 1
   fi
-  rm -rf "$STATE/dns-pending"
-  mkdir -m 700 "$STATE/dns-pending" || return 1
-  printf '%s\n' "$service" > "$STATE/dns-pending/service" || return 1
-  case "$current" in
-    "There aren't any DNS Servers set on "*) printf '%s\n' Empty > "$STATE/dns-pending/servers" ;;
-    '') return 1 ;;
-    *) printf '%s\n' "$current" > "$STATE/dns-pending/servers" ;;
-  esac || return 1
-  mv "$STATE/dns-pending" "$STATE/dns-state" || return 1
-  /usr/sbin/networksetup -setdnsservers "$service" "$TUN_DNS" || return 1
-  current=$(/usr/sbin/networksetup -getdnsservers "$service") || return 1
-  [ "$current" = "$TUN_DNS" ]
+  return 0
 }
 stop_tun() {
   # Preserve the backup and the working TUN if restoration fails; retry next time.
