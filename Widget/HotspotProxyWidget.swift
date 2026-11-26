@@ -56,6 +56,11 @@ private struct EntryView: View {
 struct HotspotProxyWidgets: WidgetBundle {
     var body: some Widget {
         HotspotStatusWidget()
+        #if os(iOS)
+        if #available(iOS 16.2, *) {
+            ProxyLiveActivity()
+        }
+        #endif
     }
 }
 

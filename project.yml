@@ -11,7 +11,7 @@ settings:
     CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "1.1.0"
-    CURRENT_PROJECT_VERSION: "2"
+    CURRENT_PROJECT_VERSION: "3"
     TARGETED_DEVICE_FAMILY: "1"
 targets:
   HotspotProxy:
@@ -45,6 +45,8 @@ targets:
         NSLocalNetworkUsageDescription: Needed to accept proxy connections from devices on your Personal Hotspot.
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         ITSAppUsesNonExemptEncryption: false
+        NSSupportsLiveActivities: true
+        NSSupportsLiveActivitiesFrequentUpdates: true
         CFBundleURLTypes:
           - CFBundleURLName: com.indoyoon.hotspotproxy
             CFBundleURLSchemes: [hotspotproxy]

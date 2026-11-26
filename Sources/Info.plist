@@ -33,6 +33,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Needed to accept proxy connections from devices on your Personal Hotspot.</string>
 	<key>UIBackgroundModes</key>

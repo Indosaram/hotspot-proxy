@@ -2,7 +2,7 @@
 import PackageDescription
 
 var sources = ["Shared/ProxyProtocol.swift", "Shared/ProxySnapshot.swift"]
-var excludes = ["Tests", "Widget", "Config", "Resources", "mac", "design", "docs", "HotspotProxy.xcodeproj", "README.md", "DESIGN.md", "project.yml", "Shared/Colors.xcassets", "Shared/StatusStyle.swift"]
+var excludes = ["Tests", "Widget", "Config", "Resources", "mac", "design", "docs", "HotspotProxy.xcodeproj", "README.md", "DESIGN.md", "project.yml", "Shared/Colors.xcassets", "Shared/StatusStyle.swift", "Shared/ProxyActivityAttributes.swift"]
 #if os(macOS)
 sources += ["Sources/ProxyServer.swift", "Sources/UdpRelay.swift"]
 excludes += ["Sources/App.swift", "Sources/KeepAlive.swift", "Sources/Info.plist", "Sources/Design", "Sources/Model", "Sources/Views"]

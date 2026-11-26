@@ -3,6 +3,9 @@ import Darwin
 import UIKit
 import WidgetKit
 import Network
+#if os(iOS)
+import ActivityKit
+#endif
 
 @MainActor
 final class ProxyModel: ObservableObject {
@@ -26,6 +29,9 @@ final class ProxyModel: ObservableObject {
     private let pathMonitor = NWPathMonitor()
     private var lastWidgetReload = Date.distantPast
     private var lastPublished: ProxySnapshot?
+    #if os(iOS)
+    private var liveActivity: Any?
+    #endif
     /// -uiDemo / -uiDemoNoHotspot: screenshot QA mode, never starts the real server.
     let demo: Bool
 
@@ -210,7 +216,43 @@ final class ProxyModel: ObservableObject {
             WidgetCenter.shared.reloadTimelines(ofKind: SharedStore.widgetKind)
         }
         lastPublished = s
+        #if os(iOS)
+        syncLiveActivity(s)
+        #endif
     }
+
+    #if os(iOS)
+    private func syncLiveActivity(_ s: ProxySnapshot) {
+        guard !demo, #available(iOS 16.2, *) else { return }
+        let wantsActivity = requested && s.status != .stopped && s.status != .error
+        guard wantsActivity else {
+            if let activity = liveActivity as? Activity<ProxyActivityAttributes> {
+                let final = activity
+                liveActivity = nil
+                let last = ProxyActivityAttributes.ContentState(
+                    status: s.status, endpoint: s.endpoint,
+                    connections: s.connections, bytes: s.bytes)
+                Task { await final.end(ActivityContent(state: last, staleDate: nil), dismissalPolicy: .immediate) }
+            }
+            return
+        }
+        let state = ProxyActivityAttributes.ContentState(
+            status: s.status, endpoint: s.endpoint, connections: s.connections, bytes: s.bytes)
+        if let activity = liveActivity as? Activity<ProxyActivityAttributes> {
+            Task { await activity.update(ActivityContent(state: state, staleDate: s.expiresAt)) }
+            return
+        }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        do {
+            liveActivity = try Activity.request(
+                attributes: ProxyActivityAttributes(startedAt: startedAt ?? .now),
+                content: ActivityContent(state: state, staleDate: s.expiresAt),
+                pushType: nil)
+        } catch {
+            liveActivity = nil
+        }
+    }
+    #endif
 
     func refreshAddresses() {
         var out: [(String, String)] = []
